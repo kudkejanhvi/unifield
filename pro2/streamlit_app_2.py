@@ -18,7 +18,7 @@ st.title("💳 Customer Retention Dashboard")
 # -------------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("European_Bank (1).csv")
+    return pd.read_csv("European_Bank.csv")
 
 df = load_data()
 
