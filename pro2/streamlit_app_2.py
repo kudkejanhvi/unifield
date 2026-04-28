@@ -5,6 +5,7 @@ import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+import os
 
 # -------------------------------
 # PAGE CONFIG
@@ -14,17 +15,27 @@ st.set_page_config(page_title="Bank Retention Dashboard", layout="wide")
 st.title("💳 Customer Retention Dashboard")
 
 # -------------------------------
-# LOAD DATA
+# LOAD DATA (FIXED)
 # -------------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("European_Bank.csv")
+    # Try multiple paths (works local + cloud)
+    if os.path.exists("European_Bank.csv"):
+        return pd.read_csv("European_Bank.csv")
+    elif os.path.exists("pro2/European_Bank.csv"):
+        return pd.read_csv("pro2/European_Bank.csv")
+    elif os.path.exists("data/European_Bank.csv"):
+        return pd.read_csv("data/European_Bank.csv")
+    else:
+        st.error("❌ CSV file not found. Upload it to GitHub correctly.")
+        st.stop()
 
 df = load_data()
 
 # -------------------------------
 # DATA CLEANING
 # -------------------------------
+df = df.copy()
 df.drop(['CustomerId', 'Surname'], axis=1, inplace=True)
 df = pd.get_dummies(df, columns=['Geography', 'Gender'], drop_first=True)
 
@@ -52,7 +63,9 @@ features = [
 X = df[features]
 y = df['Exited']
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
 model = RandomForestClassifier()
 model.fit(X_train, y_train)
@@ -82,29 +95,25 @@ geo_filter = st.sidebar.multiselect(
 )
 
 # -------------------------------
-# APPLY FILTERS (FIXED)
+# APPLY FILTERS
 # -------------------------------
 filtered_df = df.copy()
 
-# Product filter
 filtered_df = filtered_df[
     (filtered_df['NumOfProducts'] >= product_filter[0]) &
     (filtered_df['NumOfProducts'] <= product_filter[1])
 ]
 
-# Balance filter
 filtered_df = filtered_df[
     (filtered_df['Balance'] >= balance_filter[0]) &
     (filtered_df['Balance'] <= balance_filter[1])
 ]
 
-# Activity filter
 if activity_filter != "All":
     filtered_df = filtered_df[
         filtered_df['IsActiveMember'] == activity_filter
     ]
 
-# Geography filter (correct handling)
 geo_conditions = []
 
 if "France" in geo_filter:
@@ -220,7 +229,6 @@ input_df = pd.DataFrame({
     'EngagementScore':[active + card + products]
 })
 
-# IMPORTANT: match training columns
 input_df = input_df.reindex(columns=features, fill_value=0)
 
 if st.button("Predict"):
